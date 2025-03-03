@@ -184,8 +184,14 @@ void CMonitor::onConnect(bool noRule) {
     output->state->setEnabled(true);
 
     // set mode, also applies
-    if (!noRule)
+    if (!noRule) {
         applyMonitorRule(&monitorRule, true);
+
+        if (!m_bEnabled) {
+            // applyMonitorRule must have failed to apply any mode. This failure is already logged there.
+            return;
+        }
+    }
 
     if (!state.commit())
         Debug::log(WARN, "state.commit() failed in CMonitor::onCommit");
@@ -632,6 +638,11 @@ bool CMonitor::applyMonitorRule(SMonitorRule* pMonitorRule, bool force) {
 
     if (!success) {
         Debug::log(ERR, "Monitor {} has NO FALLBACK MODES, and an INVALID one was requested: {:X0}@{:.2f}Hz", szName, RULE->resolution, RULE->refreshRate);
+
+        if (m_bEnabled)
+            onDisconnect();
+        events.modeChanged.emit();
+
         return true;
     }
 
